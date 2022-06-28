@@ -1,0 +1,1 @@
+Stand alone console application. Simple unit test without any testing framework.
