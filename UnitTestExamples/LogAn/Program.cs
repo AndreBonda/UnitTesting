@@ -3,7 +3,7 @@
 using LogAn;
 
 // fake dipendency injection
-var analyzer = new LogAnalyzer(new FileExtensionManager());
+var analyzer = new LogAnalyzer(new FileExtensionManager(), new WebService(), new EmailService());
 
 Console.WriteLine($"Is 'file.slf' valid?: {analyzer.IsValidLogFileName("file.slf")}");
 Console.WriteLine($"Is 'file.SLF' valid?: {analyzer.IsValidLogFileName("file.SLF")}");

@@ -1,4 +1,5 @@
 ﻿using LogAn.Interfaces;
+using LogAn.UnitTests.Fakes;
 using NUnit.Framework;
 
 namespace LogAn.UnitTests;
@@ -12,13 +13,28 @@ namespace LogAn.UnitTests;
 [TestFixture]
 public class LogAnalyzerTests
 {
+    //Stubs
+    private FakeStubExtensionManager _fakeStubExtensionManager;
+    private FakeStubWebService _fakeStubWebService;
+    
+    //Mocks
+    private FakeMockWebService _fakeMockWebSvc;
+    private FakeMockEmailService _fakeMockEmailService;
+
+    [SetUp]
+    public void InitTest()
+    {
+        _fakeStubExtensionManager = new FakeStubExtensionManager();
+        _fakeStubWebService = new FakeStubWebService();
+        _fakeMockWebSvc = new FakeMockWebService();
+        _fakeMockEmailService = new FakeMockEmailService();
+    }
 
     [Test]
     public void IsValidLogFileName_SupportedExtension_ReturnTrue()
     {
-        FakeExtensionManager fakeExtensionManager = new FakeExtensionManager();
-        fakeExtensionManager.ValidExtension = true;
-        LogAnalyzer analyzer = new LogAnalyzer(fakeExtensionManager);
+        _fakeStubExtensionManager.ValidExtension = true;
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, null, null);
         bool result = analyzer.IsValidLogFileName("file.valid-extension");
         
         Assert.True(result);
@@ -27,9 +43,8 @@ public class LogAnalyzerTests
     [Test]
     public void IsValidLogFileName_UnsupportedExtension_ReturnFalse()
     {
-        FakeExtensionManager fakeExtensionManager = new FakeExtensionManager();
-        fakeExtensionManager.ValidExtension = false;
-        LogAnalyzer analyzer = new LogAnalyzer(fakeExtensionManager);
+        _fakeStubExtensionManager.ValidExtension = false;
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, null, null);
         bool result = analyzer.IsValidLogFileName("file.not-valid-extension");
         
         Assert.False(result);
@@ -38,9 +53,8 @@ public class LogAnalyzerTests
     [Test]
     public void IsValidLogFileName_AfterInvoke_ChangeWasLastFileNameValid()
     {
-        FakeExtensionManager fakeExtensionManager = new FakeExtensionManager();
-        fakeExtensionManager.ValidExtension = true;
-        LogAnalyzer analyzer = new LogAnalyzer(fakeExtensionManager);
+        _fakeStubExtensionManager.ValidExtension = true;
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, null, null);
         bool result = analyzer.IsValidLogFileName("file.valid-extension");
         
         Assert.True(analyzer.WasLastExtenxionValid);
@@ -49,25 +63,43 @@ public class LogAnalyzerTests
     [Test]
     public void IsValidLogFileName_AfterInvoke_ChangeWasLastFileNameNotValid()
     {
-        FakeExtensionManager fakeExtensionManager = new FakeExtensionManager();
-        fakeExtensionManager.ValidExtension = false;
-        LogAnalyzer analyzer = new LogAnalyzer(fakeExtensionManager);
+        _fakeStubExtensionManager.ValidExtension = false;
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, null, null);
         bool result = analyzer.IsValidLogFileName("file.valid-extension");
         
         Assert.False(analyzer.WasLastExtenxionValid);
     }
-}
 
-// Stub class. Ci permette di bypassare la dipendenza del file-system che abbiamo nella reale implementazione FileExtensionManager.
-internal class FakeExtensionManager : IFileExtensionManager
-{
-    /// <summary>
-    /// Valorizzato dai test-cases per simulare il risultato della reale implementazione FileExtensionManager
-    /// </summary>
-    public bool ValidExtension { get; set; }
-    
-    public bool IsValid(string fileName)
+    [TestCase("a")]
+    [TestCase("bb")]
+    public void IsValidLogFileName_TooShortFileName_CallWebService(string fileName)
     {
-        return ValidExtension;
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, _fakeMockWebSvc, null);
+        analyzer.IsValidLogFileName(fileName);
+        
+        StringAssert.Contains("short", _fakeMockWebSvc.LastErrorMsg);
     }
+
+    [TestCase("longEnogh")]
+    public void IsValidLogFileName_ExpectedLengthFileName_NoCallWebService(string fileName)
+    {
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, _fakeMockWebSvc, null);
+        analyzer.IsValidLogFileName(fileName);
+
+        Assert.Null(_fakeMockWebSvc.LastErrorMsg);
+    }
+
+    [TestCase("a")]
+    public void IsValidLogFileName_WebServiceFail_SendEmail(string fileName)
+    {
+        _fakeStubWebService.ThrowException = new Exception("fake exception");
+        LogAnalyzer analyzer = new LogAnalyzer(null, _fakeStubWebService, _fakeMockEmailService);
+        analyzer.IsValidLogFileName(fileName);
+        
+        StringAssert.Contains("someone@somewhere.com", _fakeMockEmailService.To);
+        StringAssert.Contains("can't log", _fakeMockEmailService.Subject);
+        StringAssert.AreEqualIgnoringCase("fake exception", _fakeMockEmailService.Body);
+    }
+
+
 }
