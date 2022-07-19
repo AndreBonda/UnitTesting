@@ -1,5 +1,6 @@
 ﻿using LogAn.Interfaces;
 using LogAn.UnitTests.Fakes;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace LogAn.UnitTests;
@@ -8,33 +9,35 @@ namespace LogAn.UnitTests;
  * Per questo test è stato utilizzato la tecnica che inietta uno stub tramite costruttore.
  * Configurando lo stub è possibile emulare i vari comportamenti della reale implementazione.
  * Libro 'The art of unit testing' --> capitolo 3.4.3
- */
+ *
+ * In un primo esempio gli stubs e i sono stati implementati manualmente, successivamente rimpiazzati
+ * dall'utilizzo di un isolation framework che genera i fake dinamicamente.
+ *
+ * Il codice dei fake con NSubstitute viene generato a Runtime.
+ */clear
 
 [TestFixture]
 public class LogAnalyzerTests
 {
-    //Stubs
-    private FakeStubExtensionManager _fakeStubExtensionManager;
-    private FakeStubWebService _fakeStubWebService;
-    
-    //Mocks
-    private FakeMockWebService _fakeMockWebSvc;
-    private FakeMockEmailService _fakeMockEmailService;
+    private IFileExtensionManager _fakeFileExtensionManager;
+    private IWebService _fakeWebService;
+    private IEmailService _fakeEmailService;
 
     [SetUp]
     public void InitTest()
     {
-        _fakeStubExtensionManager = new FakeStubExtensionManager();
-        _fakeStubWebService = new FakeStubWebService();
-        _fakeMockWebSvc = new FakeMockWebService();
-        _fakeMockEmailService = new FakeMockEmailService();
+        _fakeFileExtensionManager = Substitute.For<IFileExtensionManager>();
+        _fakeWebService = Substitute.For<IWebService>();
+        _fakeEmailService = Substitute.For<IEmailService>();
     }
 
     [Test]
     public void IsValidLogFileName_SupportedExtension_ReturnTrue()
     {
-        _fakeStubExtensionManager.ValidExtension = true;
-        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, null, null);
+        _fakeFileExtensionManager
+            .IsValid(Arg.Any<string>())
+            .Returns(true);
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeFileExtensionManager, _fakeWebService, null);
         bool result = analyzer.IsValidLogFileName("file.valid-extension");
         
         Assert.True(result);
@@ -43,19 +46,23 @@ public class LogAnalyzerTests
     [Test]
     public void IsValidLogFileName_UnsupportedExtension_ReturnFalse()
     {
-        _fakeStubExtensionManager.ValidExtension = false;
-        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, null, null);
+        _fakeFileExtensionManager
+            .IsValid(Arg.Any<string>())
+            .Returns(false);
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeFileExtensionManager, _fakeWebService, null);
         bool result = analyzer.IsValidLogFileName("file.not-valid-extension");
         
         Assert.False(result);
     }
     
     [Test]
-    public void IsValidLogFileName_AfterInvoke_ChangeWasLastFileNameValid()
+    public void IsValidLogFileName_SupportedExtension_ChangeWasLastFileNameValid()
     {
-        _fakeStubExtensionManager.ValidExtension = true;
-        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, null, null);
-        bool result = analyzer.IsValidLogFileName("file.valid-extension");
+        _fakeFileExtensionManager
+            .IsValid(Arg.Any<string>())
+            .Returns(true);
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeFileExtensionManager, _fakeWebService, null);
+        analyzer.IsValidLogFileName("file.valid-extension");
         
         Assert.True(analyzer.WasLastExtenxionValid);
     }
@@ -63,9 +70,11 @@ public class LogAnalyzerTests
     [Test]
     public void IsValidLogFileName_AfterInvoke_ChangeWasLastFileNameNotValid()
     {
-        _fakeStubExtensionManager.ValidExtension = false;
-        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, null, null);
-        bool result = analyzer.IsValidLogFileName("file.valid-extension");
+        _fakeFileExtensionManager
+            .IsValid(Arg.Any<string>())
+            .Returns(false);
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeFileExtensionManager, _fakeWebService, null);
+        analyzer.IsValidLogFileName("file.valid-extension");
         
         Assert.False(analyzer.WasLastExtenxionValid);
     }
@@ -74,32 +83,38 @@ public class LogAnalyzerTests
     [TestCase("bb")]
     public void IsValidLogFileName_TooShortFileName_CallWebService(string fileName)
     {
-        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, _fakeMockWebSvc, null);
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeFileExtensionManager, _fakeWebService, null);
         analyzer.IsValidLogFileName(fileName);
         
-        StringAssert.Contains("short", _fakeMockWebSvc.LastErrorMsg);
+        _fakeWebService.Received().LogError("Too short");
     }
 
-    [TestCase("longEnogh")]
+    [TestCase("longEnough")]
     public void IsValidLogFileName_ExpectedLengthFileName_NoCallWebService(string fileName)
     {
-        LogAnalyzer analyzer = new LogAnalyzer(_fakeStubExtensionManager, _fakeMockWebSvc, null);
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeFileExtensionManager, _fakeWebService, null);
         analyzer.IsValidLogFileName(fileName);
 
-        Assert.Null(_fakeMockWebSvc.LastErrorMsg);
+        _fakeWebService.DidNotReceive().LogError(null);
     }
 
     [TestCase("a")]
-    public void IsValidLogFileName_WebServiceFail_SendEmail(string fileName)
+    public void IsValidLogFileName_WebServiceThrow_SendEmail(string fileName)
     {
-        _fakeStubWebService.ThrowException = new Exception("fake exception");
-        LogAnalyzer analyzer = new LogAnalyzer(null, _fakeStubWebService, _fakeMockEmailService);
+        //_fakeStubWebServiceOld.ThrowException = new Exception("fake exception");
+        _fakeWebService
+            .When(x => x.LogError(Arg.Any<string>()))
+            .Do(context => throw new Exception("Fake exception"));
+        
+        LogAnalyzer analyzer = new LogAnalyzer(_fakeFileExtensionManager, _fakeWebService, _fakeEmailService);
         analyzer.IsValidLogFileName(fileName);
         
-        StringAssert.Contains("someone@somewhere.com", _fakeMockEmailService.To);
-        StringAssert.Contains("can't log", _fakeMockEmailService.Subject);
-        StringAssert.AreEqualIgnoringCase("fake exception", _fakeMockEmailService.Body);
+        // qui le stringhe devono essere uguali
+        _fakeEmailService.Received().SendEmail("someone@somewhere.com", "can't log", "Fake exception");
+        
+        // se non voglio confrontare tutta la stringa ma verificare che contengano delle parole chiave all'interno.
+        _fakeEmailService.Received().SendEmail(Arg.Is<string>(s => s.Contains("someone")), 
+            Arg.Is<string>(s => s.ToLower().Contains("can't log")), 
+            Arg.Is<string>(s => s.ToLower().Contains("fake")));
     }
-
-
 }
