@@ -14,7 +14,7 @@ namespace LogAn.UnitTests;
  * dall'utilizzo di un isolation framework che genera i fake dinamicamente.
  *
  * Il codice dei fake con NSubstitute viene generato a Runtime.
- */clear
+ */
 
 [TestFixture]
 public class LogAnalyzerTests
