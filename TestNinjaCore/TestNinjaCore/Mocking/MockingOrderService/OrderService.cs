@@ -1,6 +1,6 @@
-﻿namespace TestNinja.Mocking
-{
-    public class OrderService
+﻿namespace TestNinjaCore.Mocking.MockingOrderService;
+
+public class OrderService
     {
         private readonly IStorage _storage;
 
@@ -27,4 +27,3 @@
     {
         int Store(object obj);
     }
-}

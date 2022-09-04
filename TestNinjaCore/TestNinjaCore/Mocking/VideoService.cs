@@ -1,18 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using TestNinjaCore.Mocking.VideoServiceExample;
 
-namespace TestNinja.Mocking
+namespace TestNinjaCore.Mocking
 {
     public class VideoService
     {
-        public string ReadVideoTitle()
+        private readonly IFileReader _fileReader;
+        private readonly IConverter<Video> _converter;
+
+        public VideoService(IFileReader fileReader, IConverter<Video> converter)
         {
-            var str = File.ReadAllText("video.txt");
-            var video = JsonConvert.DeserializeObject<Video>(str);
+            _fileReader = fileReader;
+            _converter = converter;
+        }
+
+        public string ReadVideoTitle(string path)
+        {
+            var str = _fileReader.ReadFileContent(path);
+            var video = _converter.Deserialize(str);
             if (video == null)
                 return "Error parsing the video.";
             return video.Title;
