@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestNinjaCore", "TestNinjaCore\TestNinjaCore.csproj", "{ED35897C-F128-46AC-A0DA-D58C0E658849}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ninja.UnitTests", "Ninja.UnitTests\Ninja.UnitTests.csproj", "{58F5DD7E-6D44-440F-911B-D6BE3404964E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{ED35897C-F128-46AC-A0DA-D58C0E658849}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ED35897C-F128-46AC-A0DA-D58C0E658849}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ED35897C-F128-46AC-A0DA-D58C0E658849}.Release|Any CPU.Build.0 = Release|Any CPU
+		{58F5DD7E-6D44-440F-911B-D6BE3404964E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58F5DD7E-6D44-440F-911B-D6BE3404964E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58F5DD7E-6D44-440F-911B-D6BE3404964E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58F5DD7E-6D44-440F-911B-D6BE3404964E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
